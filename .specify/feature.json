@@ -1,0 +1,7 @@
+{
+  "feature_directory": "docs/specs/phase-1",
+  "feature_name": "Phase 1: Foundation + Reminder Loop",
+  "created": "2026-06-22",
+  "integration": "hermes",
+  "speckit_version": "0.11.4.dev0"
+}
