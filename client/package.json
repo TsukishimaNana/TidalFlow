@@ -7,7 +7,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "build:win": "electron-vite build --win",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "auto-launch": "^5.0.6",
