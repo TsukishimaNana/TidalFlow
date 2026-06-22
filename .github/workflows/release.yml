@@ -109,7 +109,7 @@ jobs:
         run: pnpm --filter client build
 
       - name: Run tests
-        run: pnpm test
+        run: cd client && pnpm run test
 
       - name: Package Windows client
         run: npx electron-builder --win --publish never
