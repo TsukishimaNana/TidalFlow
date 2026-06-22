@@ -1,5 +1,5 @@
 import type { Task } from 'shared';
-import { CATEGORY_LABELS, DEFAULT_SETTINGS } from 'shared';
+import { CATEGORY_MAP, DEFAULT_SETTINGS } from 'shared';
 
 const todayTasks: Task[] = [
   {
@@ -138,7 +138,7 @@ function App(): JSX.Element {
                 </div>
                 <p className="mt-2 text-sm leading-6 text-stone-600">{task.description}</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
-                  <span className="rounded bg-stone-100 px-2 py-1 text-stone-700">{CATEGORY_LABELS[task.category]}</span>
+                  <span className="rounded bg-stone-100 px-2 py-1 text-stone-700">{CATEGORY_MAP[task.category].label}</span>
                   <span className="rounded bg-stone-100 px-2 py-1 text-stone-700">{statusLabels[task.status]}</span>
                 </div>
               </article>

@@ -1,9 +1,12 @@
-import { join } from 'node:path';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow } from 'electron';
+import { setupTray, shouldForceQuit } from './tray';
+import { loadRenderer, openExternalLinksInBrowser, preloadPath } from './windows';
+import { registerApiProxyHandlers } from './ipc/apiProxy';
+import { registerCacheHandlers } from './ipc/cacheBridge';
+import { connectWsBridge, disconnectWsBridge, registerWsBridge } from './ipc/wsBridge';
+import { cacheService } from './services/cacheService';
 
-const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
-
-function createMainWindow(): void {
+function createMainWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1180,
     height: 760,
@@ -13,7 +16,7 @@ function createMainWindow(): void {
     backgroundColor: '#f7f7f5',
     show: false,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: preloadPath,
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
@@ -24,30 +27,50 @@ function createMainWindow(): void {
     mainWindow.show();
   });
 
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
-    return { action: 'deny' };
+  mainWindow.on('close', (event) => {
+    if (shouldForceQuit()) {
+      return;
+    }
+
+    event.preventDefault();
+    mainWindow.hide();
   });
 
-  if (isDev && process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
-  } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
-  }
+  openExternalLinksInBrowser(mainWindow);
+  loadRenderer(mainWindow);
+
+  return mainWindow;
 }
 
 void app.whenReady().then(() => {
-  createMainWindow();
+  // Initialize services
+  cacheService.initCache();
+  registerApiProxyHandlers();
+  registerCacheHandlers();
+  registerWsBridge();
+
+  let mainWindow = createMainWindow();
+  setupTray(mainWindow, app);
+  connectWsBridge();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+    if (mainWindow.isDestroyed()) {
+      mainWindow = createMainWindow();
+      setupTray(mainWindow, app);
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
 });
 
+app.on('before-quit', () => {
+  disconnectWsBridge();
+  cacheService.close();
+});
+
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (shouldForceQuit()) {
     app.quit();
   }
 });

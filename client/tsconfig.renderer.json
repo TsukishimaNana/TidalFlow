@@ -12,6 +12,11 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "shared": ["../shared/src/index.ts"],
+      "@shared/*": ["../shared/src/*"]
+    },
     "types": ["vite/client"]
   },
   "include": ["src/renderer/src", "src/renderer/src/vite-env.d.ts"],
