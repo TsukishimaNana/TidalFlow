@@ -1,0 +1,31 @@
+{
+  "name": "tidalflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ADHD 时间管家 - 云服务端 + 桌面客户端",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter server dev",
+    "dev:client": "pnpm --filter client dev",
+    "build": "pnpm --filter client build",
+    "build:win": "pnpm --filter client build:win",
+    "typecheck": "pnpm --filter shared typecheck && pnpm --filter server typecheck && pnpm --filter client typecheck",
+    "lint": "pnpm --filter server lint && pnpm --filter client lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@8.15.6",
+  "keywords": [
+    "adhd",
+    "task-manager",
+    "electron",
+    "reminder"
+  ],
+  "author": "TidalFlow",
+  "license": "MIT"
+}
