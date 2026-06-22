@@ -17,7 +17,7 @@ function createMainWindow(): BrowserWindow {
     minHeight: 640,
     title: 'TidalFlow',
     backgroundColor: '#f7f7f5',
-    show: false,
+    show: true,
     webPreferences: {
       preload: preloadPath,
       sandbox: false,
@@ -28,7 +28,6 @@ function createMainWindow(): BrowserWindow {
 
   mainWindow.once('ready-to-show', () => {
     logger.info('Main window ready to show');
-    mainWindow.show();
   });
 
   mainWindow.on('close', (event) => {

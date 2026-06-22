@@ -10,11 +10,11 @@
   },
   "scripts": {
     "dev": "pnpm --filter server dev",
-    "dev:client": "pnpm --filter client dev",
-    "build": "pnpm --filter client build",
-    "build:win": "pnpm --filter client build:win",
-    "typecheck": "pnpm --filter shared typecheck && pnpm --filter server typecheck && pnpm --filter client typecheck",
-    "lint": "pnpm --filter server lint && pnpm --filter client lint"
+    "dev:client": "pnpm --filter tidalflow dev",
+    "build": "pnpm --filter tidalflow build",
+    "build:win": "pnpm --filter tidalflow build:win",
+    "typecheck": "pnpm --filter shared typecheck && pnpm --filter server typecheck && pnpm --filter tidalflow typecheck",
+    "lint": "pnpm --filter server lint && pnpm --filter tidalflow lint"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

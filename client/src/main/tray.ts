@@ -17,7 +17,7 @@ function showWindow(window: BrowserWindow): void {
 
 function getIconPath(app: App): string {
   if (app.isPackaged) {
-    return join(process.resourcesPath, 'build', 'icon.png');
+    return join(process.resourcesPath, 'icon.png');
   }
 
   return join(app.getAppPath(), 'build', 'icon.png');

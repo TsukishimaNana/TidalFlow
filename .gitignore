@@ -6,6 +6,9 @@ node_modules/
 dist/
 out/
 build/
+!client/build/icon.png
+!client/build/icon.ico
+!client/build/installer.nsh
 *.tsbuildinfo
 
 # Environment variables

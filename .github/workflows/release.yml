@@ -107,7 +107,7 @@ jobs:
           fi
 
       - name: Build client
-        run: pnpm --filter client build
+        run: pnpm --filter tidalflow build
 
       - name: Run tests
         continue-on-error: true

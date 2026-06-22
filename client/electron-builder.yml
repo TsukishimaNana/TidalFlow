@@ -35,7 +35,7 @@ nsis:
   oneClick: false
   perMachine: false
   allowElevation: true
-  allowToChangeInstallationDirectory: false
+  allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
   runAfterFinish: true
   unicode: true
@@ -43,3 +43,5 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: TidalFlow
+  installerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
