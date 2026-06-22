@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { CATEGORY_MAP } from 'shared';
-import type { Task } from 'shared';
+import { CATEGORY_MAP } from '@tidalflow/shared';
+import type { Task } from '@tidalflow/shared';
 import { playCompleteSound } from '../utils/sounds';
 
 interface TaskItemProps {
