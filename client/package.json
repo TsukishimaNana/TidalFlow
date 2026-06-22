@@ -40,5 +40,6 @@
     "typescript": "^5.3.3",
     "vite": "^6.4.3",
     "vitest": "^4.1.9"
-  }
+  },
+  "main": "./out/main/index.js"
 }
