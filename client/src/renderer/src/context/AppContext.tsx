@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { ApiResponse, CreateTaskInput, Task, UpdateTaskInput, WsServerEvent } from 'shared'
+import type { ApiResponse, CreateTaskInput, Task, UpdateTaskInput, WsServerEvent } from '@tidalflow/shared'
 import { logger } from '../utils/logger'
 
 interface AppContextValue {

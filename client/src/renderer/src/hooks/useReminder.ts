@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { WsServerEvent } from 'shared'
+import type { WsServerEvent } from '@tidalflow/shared'
 
 export interface ActiveReminder {
   id: string;

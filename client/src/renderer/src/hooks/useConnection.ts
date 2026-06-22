@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { WsServerEvent } from 'shared';
+import type { WsServerEvent } from '@tidalflow/shared';
 import { useAppContext } from '../context/AppContext';
 
 export function useConnection(): {

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { ApiResponse, AppSettings, CreateTaskInput, Task, UpdateTaskInput, WsServerEvent } from 'shared';
+import type { ApiResponse, AppSettings, CreateTaskInput, Task, UpdateTaskInput, WsServerEvent } from '@tidalflow/shared';
 
 type QueryParams = Record<string, string>;
 type WsEventCallback = (event: WsServerEvent) => void;

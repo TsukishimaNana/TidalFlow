@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { Task } from 'shared';
+import type { Task } from '@tidalflow/shared';
 import { useTasks } from '../hooks/useTasks';
 import TaskForm from './TaskForm';
 import TaskItem from './TaskItem';
