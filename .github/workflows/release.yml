@@ -34,7 +34,7 @@ jobs:
           version: 8.15.6
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build shared
         run: pnpm --filter @tidalflow/shared build
@@ -77,7 +77,7 @@ jobs:
           version: 8.15.6
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build shared
         shell: bash
