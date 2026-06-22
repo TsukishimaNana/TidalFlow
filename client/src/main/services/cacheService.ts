@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import type { Task } from '../../../../shared/src/types';
+import type { Task } from '@tidalflow/shared';
 
 type SqliteDatabase = Database.Database;
 

@@ -14,6 +14,9 @@ importers:
 
   client:
     dependencies:
+      '@tidalflow/shared':
+        specifier: workspace:*
+        version: link:../shared
       auto-launch:
         specifier: ^5.0.6
         version: 5.0.6
@@ -26,9 +29,6 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
-      shared:
-        specifier: workspace:*
-        version: link:../shared
       ws:
         specifier: ^8.16.0
         version: 8.21.0
@@ -87,6 +87,9 @@ importers:
       '@larksuiteoapi/node-sdk':
         specifier: ^1.30.0
         version: 1.67.0
+      '@tidalflow/shared':
+        specifier: workspace:*
+        version: link:../shared
       better-sqlite3:
         specifier: ^11.0.0
         version: 11.10.0
@@ -102,9 +105,6 @@ importers:
       node-cron:
         specifier: ^3.0.3
         version: 3.0.3
-      shared:
-        specifier: workspace:*
-        version: link:../shared
       uuid:
         specifier: ^9.0.1
         version: 9.0.1
@@ -112,6 +112,9 @@ importers:
         specifier: ^8.16.0
         version: 8.21.0
     devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
       '@types/cors':
         specifier: ^2.8.17
         version: 2.8.19

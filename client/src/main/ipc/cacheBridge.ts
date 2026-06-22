@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
-import { IPC_CHANNELS } from '../../../../shared/src/constants';
-import type { Task } from '../../../../shared/src/types';
+import { IPC_CHANNELS } from '@tidalflow/shared';
+import type { Task } from '@tidalflow/shared';
 import { cacheService } from '../services/cacheService';
 
 let handlersRegistered = false;

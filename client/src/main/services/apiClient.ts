@@ -1,5 +1,5 @@
-import { DEFAULT_SERVER_URL } from '../../../../shared/src/constants';
-import type { ApiResponse } from '../../../../shared/src/types';
+import { DEFAULT_SERVER_URL } from '@tidalflow/shared';
+import type { ApiResponse } from '@tidalflow/shared';
 
 const API_PREFIX = '/api/v1';
 

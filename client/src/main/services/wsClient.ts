@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import type { RawData } from 'ws';
-import type { WsClientEvent, WsServerEvent } from '../../../../shared/src/wsEvents';
-import { createAuthClientEvent, createPingClientEvent } from '../../../../shared/src/wsEvents';
+import type { WsClientEvent, WsServerEvent } from '@tidalflow/shared';
+import { createAuthClientEvent, createPingClientEvent } from '@tidalflow/shared';
 
 type WsEventCallback = (event: WsServerEvent) => void;
 

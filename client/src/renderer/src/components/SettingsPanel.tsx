@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { DEFAULT_SETTINGS } from '@shared';
-import type { AppSettings } from '@shared';
+import { DEFAULT_SETTINGS } from '@tidalflow/shared';
+import type { AppSettings } from '@tidalflow/shared';
 import { useSettings } from '../hooks/useSettings';
 
 type SettingsPanelProps = {

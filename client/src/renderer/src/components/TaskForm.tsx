@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CATEGORY_MAP } from 'shared';
-import type { CreateTaskInput, Task, UpdateTaskInput } from 'shared';
+import { CATEGORY_MAP } from '@tidalflow/shared';
+import type { CreateTaskInput, Task, UpdateTaskInput } from '@tidalflow/shared';
 
 interface TaskFormProps {
   task?: Task | null;

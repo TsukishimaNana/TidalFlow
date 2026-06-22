@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import Store from 'electron-store';
-import { DEFAULT_SETTINGS, IPC_CHANNELS } from '@shared';
-import type { AppSettings } from '@shared';
+import { DEFAULT_SETTINGS, IPC_CHANNELS } from '@tidalflow/shared';
+import type { AppSettings } from '@tidalflow/shared';
 
 type SettingsStore = {
   settings: AppSettings;

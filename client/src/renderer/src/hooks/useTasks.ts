@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { CreateTaskInput, Task, UpdateTaskInput } from 'shared';
+import type { CreateTaskInput, Task, UpdateTaskInput } from '@tidalflow/shared';
 import { useAppContext } from '../context/AppContext';
 
 function nowIso(): string {

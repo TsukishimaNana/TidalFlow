@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
-import { IPC_CHANNELS } from '@shared';
+import { IPC_CHANNELS } from '@tidalflow/shared';
 import { createPanelWindow, getPanelWindow, hidePanelWindow, destroyPanelWindow, togglePanelWindow } from './panel';
 import { registerSettingsIpcHandlers } from './settings';
 import { createTray, destroyTray } from './tray';

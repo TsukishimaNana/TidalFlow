@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { IPC_CHANNELS } from '@shared';
+import { IPC_CHANNELS } from '@tidalflow/shared';
 
 interface UpdateAvailablePayload {
   version: string;

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS } from '@shared';
-import type { AppSettings } from '@shared';
+import { IPC_CHANNELS } from '@tidalflow/shared';
+import type { AppSettings } from '@tidalflow/shared';
 
 type NavigateTarget = 'settings';
 type UpdateAvailableInfo = { version: string; releaseNotes?: string };

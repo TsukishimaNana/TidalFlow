@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { Task } from '@shared';
-import { CATEGORY_MAP, DEFAULT_SETTINGS } from '@shared';
+import type { Task } from '@tidalflow/shared';
+import { CATEGORY_MAP, DEFAULT_SETTINGS } from '@tidalflow/shared';
 import SettingsPanel from './components/SettingsPanel';
 import { ReminderToast } from './components/ReminderToast';
 import { useReminder } from './hooks/useReminder';

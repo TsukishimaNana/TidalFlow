@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 import AutoLaunch from 'auto-launch' with { type: 'commonjs' };
-import { IPC_CHANNELS } from '@shared';
+import { IPC_CHANNELS } from '@tidalflow/shared';
 import { togglePanelWindow } from './panel';
 
 const AUTO_LAUNCH_NAME = 'TidalFlow';

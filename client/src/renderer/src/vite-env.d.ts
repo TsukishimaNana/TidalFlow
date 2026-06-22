@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { AppSettings } from '@shared';
+import type { AppSettings } from '@tidalflow/shared';
 
 interface TidalFlowApi {
   platform: string;

@@ -14,7 +14,7 @@
     "better-sqlite3": "^11.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "shared": "workspace:*",
+    "@tidalflow/shared": "workspace:*",
     "ws": "^8.16.0"
   },
   "devDependencies": {
