@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "build:win": "electron-vite build --win",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
   },
   "dependencies": {
     "auto-launch": "^5.0.6",
@@ -18,6 +20,8 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "playwright": "^1.52.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.2",

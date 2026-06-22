@@ -111,6 +111,26 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Install Playwright
+        run: npx playwright install chromium
+        working-directory: client
+
+      - name: E2E Smoke Tests
+        shell: bash
+        run: cd client && npx playwright test --config=e2e/playwright.config.ts
+        timeout-minutes: 3
+        env:
+          CI: 'true'
+
+      - name: Upload E2E screenshots (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-artifacts
+          path: |
+            client/e2e/test-results/
+            client/e2e/screenshots/
+
       - name: Package Windows client
         run: npx electron-builder --win --publish never
         working-directory: client
