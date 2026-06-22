@@ -51,3 +51,15 @@ select {
     transform: translateY(0);
   }
 }
+
+@keyframes reminderToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(1rem) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

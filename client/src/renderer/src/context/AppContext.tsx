@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
-import type { ApiResponse, CreateTaskInput, Task, UpdateTaskInput, WsServerEvent } from 'shared';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import type { ApiResponse, CreateTaskInput, Task, UpdateTaskInput, WsServerEvent } from 'shared'
+import { logger } from '../utils/logger'
 
 interface AppContextValue {
   tasks: Task[];
@@ -34,6 +35,22 @@ function upsertTask(tasks: Task[], task: Task): Task[] {
   return tasks.map((item) => (item.id === task.id ? task : item));
 }
 
+function getUnknownErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error;
+  }
+
+  return fallback;
+}
+
+function getThrowableError(error: unknown, fallback: string): Error {
+  return error instanceof Error ? error : new Error(fallback);
+}
+
 async function persistTasks(tasks: Task[]): Promise<void> {
   try {
     await window.tidalflow.saveCachedTasks(tasks);
@@ -56,6 +73,20 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tasksRef = useRef<Task[]>([]);
+  const isConnectedRef = useRef(false);
+
+  const setConnectionState = useCallback((connected: boolean, reason: string, shouldLog = false): void => {
+    if (isConnectedRef.current !== connected && shouldLog) {
+      if (connected) {
+        logger.info(`WebSocket connected (${reason})`);
+      } else {
+        logger.warn(`WebSocket disconnected (${reason})`);
+      }
+    }
+
+    isConnectedRef.current = connected;
+    setIsConnected(connected);
+  }, []);
 
   const applyTasks = useCallback((updater: Task[] | ((currentTasks: Task[]) => Task[])) => {
     setTasks((currentTasks) => {
@@ -92,9 +123,9 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
       }
 
       applyTasks(response.data);
-      setIsConnected(true);
+      setConnectionState(true, 'tasks refreshed');
     } catch (refreshError) {
-      setIsConnected(false);
+      setConnectionState(false, 'task refresh failed');
       const cachedTasks = await loadCachedTasks();
       setError(
         cachedTasks.length > 0
@@ -106,39 +137,49 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
     } finally {
       setIsLoading(false);
     }
-  }, [applyTasks, loadCachedTasks]);
+  }, [applyTasks, loadCachedTasks, setConnectionState]);
 
   const connect = useCallback(async (): Promise<void> => {
     try {
       await window.tidalflow.connectWs();
-      setIsConnected(true);
+      setConnectionState(true, 'connect requested', true);
     } catch (connectError) {
-      setIsConnected(false);
-      setError(connectError instanceof Error ? connectError.message : 'Failed to connect to realtime updates');
+      const message = getUnknownErrorMessage(connectError, 'Failed to connect to realtime updates');
+
+      setConnectionState(false, 'connect failed', true);
+      setError(message);
+      logger.error('WebSocket connection failed', connectError);
     }
-  }, []);
+  }, [setConnectionState]);
 
   const disconnect = useCallback(async (): Promise<void> => {
     try {
       await window.tidalflow.disconnectWs();
     } finally {
-      setIsConnected(false);
+      setConnectionState(false, 'disconnect requested', true);
     }
-  }, []);
+  }, [setConnectionState]);
 
   const createTask = useCallback(
     async (data: CreateTaskInput): Promise<Task> => {
       setError(null);
-      const response = await window.tidalflow.createTask(data);
 
-      if (!response.success || !response.data) {
-        const message = getResponseError(response, 'Failed to create task');
+      try {
+        const response = await window.tidalflow.createTask(data);
+
+        if (!response.success || !response.data) {
+          throw new Error(getResponseError(response, 'Failed to create task'));
+        }
+
+        applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
+        return response.data;
+      } catch (createError) {
+        const message = getUnknownErrorMessage(createError, 'Failed to create task');
+
         setError(message);
-        throw new Error(message);
+        logger.error('Create task failed', createError);
+        throw getThrowableError(createError, message);
       }
-
-      applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
-      return response.data;
     },
     [applyTasks]
   );
@@ -146,16 +187,23 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
   const updateTask = useCallback(
     async (id: string, data: Partial<UpdateTaskInput>): Promise<Task> => {
       setError(null);
-      const response = await window.tidalflow.updateTask(id, data);
 
-      if (!response.success || !response.data) {
-        const message = getResponseError(response, 'Failed to update task');
+      try {
+        const response = await window.tidalflow.updateTask(id, data);
+
+        if (!response.success || !response.data) {
+          throw new Error(getResponseError(response, 'Failed to update task'));
+        }
+
+        applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
+        return response.data;
+      } catch (updateError) {
+        const message = getUnknownErrorMessage(updateError, 'Failed to update task');
+
         setError(message);
-        throw new Error(message);
+        logger.error('Update task failed', updateError, { taskId: id });
+        throw getThrowableError(updateError, message);
       }
-
-      applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
-      return response.data;
     },
     [applyTasks]
   );
@@ -166,13 +214,19 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
       const previousTasks = tasksRef.current;
       applyTasks((currentTasks) => currentTasks.filter((task) => task.id !== id));
 
-      const response = await window.tidalflow.deleteTask(id);
+      try {
+        const response = await window.tidalflow.deleteTask(id);
 
-      if (!response.success) {
-        const message = getResponseError(response, 'Failed to delete task');
+        if (!response.success) {
+          throw new Error(getResponseError(response, 'Failed to delete task'));
+        }
+      } catch (deleteError) {
+        const message = getUnknownErrorMessage(deleteError, 'Failed to delete task');
+
         applyTasks(previousTasks);
         setError(message);
-        throw new Error(message);
+        logger.error('Delete task failed', deleteError, { taskId: id });
+        throw getThrowableError(deleteError, message);
       }
     },
     [applyTasks]
@@ -181,16 +235,23 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
   const completeTask = useCallback(
     async (id: string): Promise<Task> => {
       setError(null);
-      const response = await window.tidalflow.completeTask(id);
 
-      if (!response.success || !response.data) {
-        const message = getResponseError(response, 'Failed to complete task');
+      try {
+        const response = await window.tidalflow.completeTask(id);
+
+        if (!response.success || !response.data) {
+          throw new Error(getResponseError(response, 'Failed to complete task'));
+        }
+
+        applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
+        return response.data;
+      } catch (completeError) {
+        const message = getUnknownErrorMessage(completeError, 'Failed to complete task');
+
         setError(message);
-        throw new Error(message);
+        logger.error('Complete task failed', completeError, { taskId: id });
+        throw getThrowableError(completeError, message);
       }
-
-      applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
-      return response.data;
     },
     [applyTasks]
   );
@@ -198,16 +259,23 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
   const postponeTask = useCallback(
     async (id: string): Promise<Task> => {
       setError(null);
-      const response = await window.tidalflow.postponeTask(id);
 
-      if (!response.success || !response.data) {
-        const message = getResponseError(response, 'Failed to postpone task');
+      try {
+        const response = await window.tidalflow.postponeTask(id);
+
+        if (!response.success || !response.data) {
+          throw new Error(getResponseError(response, 'Failed to postpone task'));
+        }
+
+        applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
+        return response.data;
+      } catch (postponeError) {
+        const message = getUnknownErrorMessage(postponeError, 'Failed to postpone task');
+
         setError(message);
-        throw new Error(message);
+        logger.error('Postpone task failed', postponeError, { taskId: id });
+        throw getThrowableError(postponeError, message);
       }
-
-      applyTasks((currentTasks) => upsertTask(currentTasks, response.data as Task));
-      return response.data;
     },
     [applyTasks]
   );
@@ -220,37 +288,37 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
   useEffect(() => {
     const unsubscribe = window.tidalflow.onWsEvent((event: WsServerEvent) => {
       if (event.type === 'task:created') {
-        setIsConnected(true);
+        setConnectionState(true, 'task created event', true);
         applyTasks((currentTasks) => upsertTask(currentTasks, event.payload));
         return;
       }
 
       if (event.type === 'task:updated') {
-        setIsConnected(true);
+        setConnectionState(true, 'task updated event', true);
         applyTasks((currentTasks) => upsertTask(currentTasks, event.payload));
         return;
       }
 
       if (event.type === 'task:deleted') {
-        setIsConnected(true);
+        setConnectionState(true, 'task deleted event', true);
         applyTasks((currentTasks) => currentTasks.filter((task) => task.id !== event.payload.id));
         return;
       }
 
       if (event.type === 'tasks:sync') {
-        setIsConnected(true);
+        setConnectionState(true, 'tasks sync event', true);
         applyTasks(event.payload);
         return;
       }
 
       if (event.type === 'server:shutdown') {
-        setIsConnected(false);
+        setConnectionState(false, 'server shutdown event', true);
         void loadCachedTasks();
       }
     });
 
     return unsubscribe;
-  }, [applyTasks, loadCachedTasks]);
+  }, [applyTasks, loadCachedTasks, setConnectionState]);
 
   const value = useMemo<AppContextValue>(
     () => ({
