@@ -8,6 +8,9 @@ files:
   - '!**/.idea/*'
   - '!**/dist/**'
   - '!**/*.map'
+extraResources:
+  - from: build
+    to: build
 mac:
   category: public.app-category.productivity
   target:

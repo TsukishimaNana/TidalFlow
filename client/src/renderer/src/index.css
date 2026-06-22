@@ -23,6 +23,18 @@ body {
   min-height: 100vh;
 }
 
+body.utility-window {
+  overflow: hidden;
+  border-radius: 12px;
+  background: transparent;
+}
+
+body.utility-window #root {
+  min-height: 100vh;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
 button,
 input,
 textarea,
