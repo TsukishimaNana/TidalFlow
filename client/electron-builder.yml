@@ -8,9 +8,6 @@ files:
   - '!**/.idea/*'
   - '!**/dist/**'
   - '!**/*.map'
-extraResources:
-  - from: build
-    to: build
 mac:
   category: public.app-category.productivity
   target:
@@ -19,6 +16,7 @@ mac:
         - arm64
         - x64
 win:
+  icon: null
   target:
     - target: nsis
       arch:
