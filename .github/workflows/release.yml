@@ -58,6 +58,7 @@ jobs:
         with:
           files: tidalflow-server-${{ github.ref_name }}.tar.gz
           generate_release_notes: true
+          draft: true
 
   release-client:
     name: Release Windows client
@@ -147,3 +148,4 @@ jobs:
             client/dist/*.blockmap
             client/dist/latest.yml
           generate_release_notes: true
+          draft: true
