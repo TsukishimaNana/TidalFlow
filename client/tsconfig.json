@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "shared": ["../shared/src/index.ts"],
+      "@shared/*": ["../shared/src/*"]
+    },
+    "types": ["node", "electron-vite/node", "vite/client"]
+  },
+  "include": [
+    "src/main",
+    "src/preload",
+    "src/renderer/src",
+    "src/renderer/src/vite-env.d.ts"
+  ],
+  "exclude": ["node_modules", "out", "dist"]
+}
