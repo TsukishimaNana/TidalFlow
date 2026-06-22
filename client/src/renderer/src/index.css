@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes reminderToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 :root {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -23,43 +34,9 @@ body {
   min-height: 100vh;
 }
 
-body.utility-window {
-  overflow: hidden;
-  border-radius: 12px;
-  background: transparent;
-}
-
-body.utility-window #root {
-  min-height: 100vh;
-  overflow: hidden;
-  border-radius: 12px;
-}
-
 button,
 input,
 textarea,
 select {
   font: inherit;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-
-  to {
-    transform: translateY(0);
-  }
-}
-
-@keyframes reminderToastIn {
-  from {
-    opacity: 0;
-    transform: translateX(1rem) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
 }

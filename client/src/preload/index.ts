@@ -1,10 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS } from '../../../shared/src/constants';
-import type { AppSettings, CreateTaskInput, Task, UpdateTaskInput } from '../../../shared/src/types';
-import type { WsServerEvent } from '../../../shared/src/wsEvents';
+import { IPC_CHANNELS } from '@shared';
+import type { AppSettings } from '@shared';
 
-type QueryParams = Record<string, string>;
-type WsEventCallback = (event: WsServerEvent) => void;
+type NavigateTarget = 'settings';
+type UpdateAvailableInfo = { version: string; releaseNotes?: string };
+type UpdateDownloadedInfo = { version: string };
 
 const api = {
   platform: process.platform,
@@ -13,31 +13,48 @@ const api = {
     electron: process.versions.electron,
     node: process.versions.node
   },
-  getTasks: (params?: QueryParams) => ipcRenderer.invoke(IPC_CHANNELS.API_GET, '/tasks', params),
-  getTodayTasks: () => ipcRenderer.invoke(IPC_CHANNELS.API_GET, '/tasks/today'),
-  getTask: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.API_GET, `/tasks/${id}`),
-  createTask: (data: CreateTaskInput) => ipcRenderer.invoke(IPC_CHANNELS.API_POST, '/tasks', data),
-  updateTask: (id: string, data: Partial<UpdateTaskInput>) => ipcRenderer.invoke(IPC_CHANNELS.API_PATCH, `/tasks/${id}`, data),
-  deleteTask: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.API_DELETE, `/tasks/${id}`),
-  completeTask: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.API_POST, `/tasks/${id}/complete`),
-  postponeTask: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.API_POST, `/tasks/${id}/postpone`),
-  getSettings: () => ipcRenderer.invoke(IPC_CHANNELS.API_GET, '/settings'),
-  updateSettings: (data: Partial<AppSettings>) => ipcRenderer.invoke(IPC_CHANNELS.API_POST, '/settings', data),
-  connectWs: (url?: string, apiKey?: string) => ipcRenderer.invoke('ws:connect', url, apiKey),
-  disconnectWs: () => ipcRenderer.invoke('ws:disconnect'),
-  onWsEvent: (callback: WsEventCallback) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: WsServerEvent): void => {
-      callback(data);
+  settings: {
+    get: (): Promise<AppSettings> => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET),
+    save: (settings: AppSettings): Promise<AppSettings> => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_SAVE, settings)
+  },
+  navigation: {
+    onShowSettings: (callback: () => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, target: NavigateTarget) => {
+        if (target === 'settings') {
+          callback();
+        }
+      };
+
+      ipcRenderer.on(IPC_CHANNELS.WINDOW_SHOW_SETTINGS, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC_CHANNELS.WINDOW_SHOW_SETTINGS, listener);
+      };
+    }
+  },
+  UPDATE_AVAILABLE: IPC_CHANNELS.UPDATE_AVAILABLE,
+  UPDATE_DOWNLOADED: IPC_CHANNELS.UPDATE_DOWNLOADED,
+  UPDATE_INSTALL: IPC_CHANNELS.UPDATE_INSTALL,
+  onUpdateAvailable: (callback: (info: UpdateAvailableInfo) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, info: UpdateAvailableInfo) => {
+      callback(info);
     };
 
-    ipcRenderer.on(IPC_CHANNELS.WS_EVENT, listener);
-
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_AVAILABLE, listener);
     return () => {
-      ipcRenderer.removeListener(IPC_CHANNELS.WS_EVENT, listener);
+      ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_AVAILABLE, listener);
     };
   },
-  getCachedTasks: () => ipcRenderer.invoke(IPC_CHANNELS.CACHE_GET_TASKS),
-  saveCachedTasks: (tasks: Task[]) => ipcRenderer.invoke(IPC_CHANNELS.CACHE_SAVE_TASKS, tasks)
+  onUpdateDownloaded: (callback: (info: UpdateDownloadedInfo) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, info: UpdateDownloadedInfo) => {
+      callback(info);
+    };
+
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_DOWNLOADED, listener);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_DOWNLOADED, listener);
+    };
+  },
+  installUpdate: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL)
 } as const;
 
 contextBridge.exposeInMainWorld('tidalflow', api);

@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-server:
+    name: Release server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on main
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.6
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared
+        run: pnpm --filter shared build
+
+      - name: Build server
+        run: pnpm --filter server build
+
+      - name: Create server artifact
+        run: tar -czf tidalflow-server-${GITHUB_REF_NAME}.tar.gz -C server dist package.json .env.example
+
+      - name: Upload server release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tidalflow-server-${{ github.ref_name }}.tar.gz
+          generate_release_notes: true
+
+  release-client:
+    name: Release Windows client
+    runs-on: windows-latest
+    needs: release-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is on main
+        shell: bash
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.6
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared
+        shell: bash
+        run: |
+          if pnpm --filter shared exec node -e "const pkg = require('./package.json'); process.exit(pkg.scripts?.build ? 0 : 1)"; then
+            pnpm --filter shared build
+          else
+            echo "shared package has no build script; skipping"
+          fi
+
+      - name: Build client
+        run: pnpm --filter client build
+
+      - name: Package Windows client
+        run: npx electron-builder --win --publish never
+        working-directory: client
+
+      - name: Upload Windows release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            client/dist/*.exe
+            client/dist/*.blockmap
+            client/dist/latest.yml
+          generate_release_notes: true
