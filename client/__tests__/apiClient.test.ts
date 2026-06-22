@@ -20,9 +20,8 @@ describe('apiClient', () => {
     })
 
     it('prefers TIDALFLOW_API_KEY over API_KEY', () => {
-      // Must set TIDALFLOW_API_KEY explicitly as non-empty; ?? only skips null/undefined
-      process.env.TIDALFLOW_API_KEY = 'new-key'
-      process.env.API_KEY = 'old-key'
+      vi.stubEnv('TIDALFLOW_API_KEY', 'new-key')
+      vi.stubEnv('API_KEY', 'old-key')
       expect(getApiKey()).toBe('new-key')
     })
   })
@@ -60,6 +59,7 @@ describe('apiClient', () => {
     beforeEach(() => {
       originalFetch = global.fetch
       global.fetch = mockFetch
+      vi.stubEnv('TIDALFLOW_API_KEY', undefined as any)
       vi.stubEnv('API_KEY', 'test-key')
       vi.stubEnv('TIDALFLOW_SERVER_URL', 'http://localhost:3000')
     })

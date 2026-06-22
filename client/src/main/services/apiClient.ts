@@ -11,7 +11,7 @@ function getServerUrl(): string {
 }
 
 export function getApiKey(): string {
-  return process.env.API_KEY ?? process.env.TIDALFLOW_API_KEY ?? '';
+  return process.env.TIDALFLOW_API_KEY ?? process.env.API_KEY ?? '';
 }
 
 export function getWsUrl(): string {

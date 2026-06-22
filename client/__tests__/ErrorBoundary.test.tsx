@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import ErrorBoundary from '../src/renderer/src/components/ErrorBoundary'
 
 // Component that throws
@@ -79,18 +79,21 @@ describe('ErrorBoundary', () => {
 
     // Click Show Details
     const showBtn = screen.getByText('Show Details')
-    showBtn.click()
+    fireEvent.click(showBtn)
 
     // Should now show pre element with stack
-    const pre = container.querySelector('pre')
-    expect(pre).not.toBeNull()
+    await waitFor(() => {
+      expect(container.querySelector('pre')).not.toBeNull()
+    })
 
     // Click Hide Details
     const hideBtn = screen.getByText('Hide Details')
-    hideBtn.click()
+    fireEvent.click(hideBtn)
 
     // Pre should be gone
-    expect(container.querySelector('pre')).toBeNull()
+    await waitFor(() => {
+      expect(container.querySelector('pre')).toBeNull()
+    })
 
     spy.mockRestore()
   })
