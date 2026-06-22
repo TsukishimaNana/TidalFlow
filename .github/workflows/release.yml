@@ -37,7 +37,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build shared
-        run: pnpm --filter shared build
+        run: pnpm --filter @tidalflow/shared build
 
       - name: Build server
         run: pnpm --filter server build
@@ -82,8 +82,8 @@ jobs:
       - name: Build shared
         shell: bash
         run: |
-          if pnpm --filter shared exec node -e "const pkg = require('./package.json'); process.exit(pkg.scripts?.build ? 0 : 1)"; then
-            pnpm --filter shared build
+          if pnpm --filter @tidalflow/shared exec node -e "const pkg = require('./package.json'); process.exit(pkg.scripts?.build ? 0 : 1)"; then
+            pnpm --filter @tidalflow/shared build
           else
             echo "shared package has no build script; skipping"
           fi

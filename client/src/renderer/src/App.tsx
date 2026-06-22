@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Task } from '@tidalflow/shared';
 import { CATEGORY_MAP, DEFAULT_SETTINGS } from '@tidalflow/shared';
 import SettingsPanel from './components/SettingsPanel';
-import { ReminderToast } from './components/ReminderToast';
+import ReminderToast from './components/ReminderToast';
 import { useReminder } from './hooks/useReminder';
 
 const todayTasks: Task[] = [
@@ -78,7 +78,7 @@ type AppView = 'main' | 'settings';
 
 function App(): JSX.Element {
   const [view, setView] = useState<AppView>('main');
-  const { reminder, dismissReminder } = useReminder();
+  const { reminders, dismissReminder } = useReminder();
   const activeTask = todayTasks.find((task) => task.status === 'in_progress') ?? todayTasks[0];
   const totalMinutes = todayTasks.reduce((sum, task) => sum + (task.estimatedMinutes ?? 0), 0);
 
@@ -94,13 +94,7 @@ function App(): JSX.Element {
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-950">
-      {reminder && (
-        <ReminderToast
-          type={reminder.type}
-          message={reminder.message}
-          onDismiss={dismissReminder}
-        />
-      )}
+      <ReminderToast reminders={reminders} onDismiss={dismissReminder} />
       <section className="mx-auto grid min-h-screen w-full max-w-6xl gap-6 px-6 py-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
         <div className="flex flex-col gap-6">
           <header className="flex flex-wrap items-start justify-between gap-4 border-b border-stone-200 pb-5">
