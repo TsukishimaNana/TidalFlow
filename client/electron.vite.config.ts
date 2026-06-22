@@ -7,6 +7,7 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
+        shared: '../shared/src/index.ts',
         '@': '/src',
         '@shared': '../shared/src'
       }
