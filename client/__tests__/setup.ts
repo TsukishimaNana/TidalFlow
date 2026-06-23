@@ -29,7 +29,7 @@ vi.mock('electron-store', () => ({
 }))
 
 // Mock shared package
-vi.mock('shared', () => ({
+vi.mock('@tidalflow/shared', () => ({
   DEFAULT_SERVER_URL: 'http://localhost:3000',
   CATEGORY_MAP: {
     programming: { label: '编程🖥️', emoji: '🖥️' },
@@ -49,6 +49,8 @@ vi.mock('shared', () => ({
     CACHE_GET_TASKS: 'cache:get-tasks',
     CACHE_SAVE_TASKS: 'cache:save-tasks',
   },
+  createAuthClientEvent: (apiKey: string) => ({ type: 'auth', payload: { apiKey } }),
+  createPingClientEvent: () => ({ type: 'ping' }),
 }))
 
 // Mock window.tidalflow (preload bridge) — default: everything succeeds

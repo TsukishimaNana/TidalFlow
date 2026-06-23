@@ -16,7 +16,6 @@ mac:
         - arm64
         - x64
 win:
-  icon: null
   target:
     - target: nsis
       arch:
