@@ -125,7 +125,7 @@ jobs:
           fi
 
       - name: Build client
-        run: pnpm --filter client build
+        run: pnpm --filter TidalFlow build
 
       - name: Package Windows client
         run: npx electron-builder --win --publish never
