@@ -147,6 +147,7 @@ jobs:
           GATE_LOG="docs/gate-logs/installer-acceptance-${GITHUB_RUN_ID}.log"
           START_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           EXE_PATH=$(find client/dist -name '*.exe' -type f | head -1)
+          PRODUCT_NAME="TidalFlow"
           PASS=true
           RESULT="PASS"
 
@@ -162,8 +163,8 @@ jobs:
             echo "FAIL: No .exe installer found in client/dist/" | tee -a "$GATE_LOG"
             PASS=false
           else
-            SIZE=$(stat --printf="%s" "$EXE_PATH" 2>/dev/null || stat -f%z "$EXE_PATH" 2>/dev/null)
-            SIZE_MB=$(echo "scale=2; $SIZE / 1048576" | bc)
+            SIZE=$(stat -c "%s" "$EXE_PATH" 2>/dev/null || stat -f%z "$EXE_PATH" 2>/dev/null)
+            SIZE_MB=$(awk "BEGIN { printf \"%.2f\", $SIZE / 1048576 }")
             echo "PASS: Installer found: $(basename "$EXE_PATH") (${SIZE_MB} MB)" | tee -a "$GATE_LOG"
             if [ "$SIZE" -lt 10485760 ]; then
               echo "WARN: Installer < 10 MB — may be incomplete" | tee -a "$GATE_LOG"
@@ -193,24 +194,18 @@ jobs:
           echo "" | tee -a "$GATE_LOG"
           echo "--- Check: Silent install/uninstall ---" | tee -a "$GATE_LOG"
           if [ -n "$EXE_PATH" ] && [ -f "$EXE_PATH" ]; then
-            INSTALL_DIR="$HOME/test-install-$$"
+            INSTALL_ROOT="$HOME/tidalflow-installer-test-$$"
+            INSTALL_DIR="$INSTALL_ROOT/$PRODUCT_NAME"
+            INSTALL_OK=false
+            UNINSTALL_OK=false
+            MAIN_EXE=""
+            UNINSTALLER=""
+
             echo "Installing to $INSTALL_DIR ..." | tee -a "$GATE_LOG"
             if "$EXE_PATH" /S /D="$INSTALL_DIR" 2>&1 | tee -a "$GATE_LOG"; then
               if [ -d "$INSTALL_DIR" ]; then
                 echo "PASS: Installation completed, directory exists" | tee -a "$GATE_LOG"
-                # Find and run uninstaller
-                UNINSTALLER=$(find "$INSTALL_DIR" -name 'uninstall*.exe' -type f 2>/dev/null | head -1)
-                if [ -n "$UNINSTALLER" ]; then
-                  echo "Running uninstaller ..." | tee -a "$GATE_LOG"
-                  if "$UNINSTALLER" /S 2>&1 | tee -a "$GATE_LOG"; then
-                    echo "PASS: Uninstall completed" | tee -a "$GATE_LOG"
-                  else
-                    echo "FAIL: Uninstall failed" | tee -a "$GATE_LOG"
-                    PASS=false
-                  fi
-                else
-                  echo "WARN: No uninstaller found in $INSTALL_DIR" | tee -a "$GATE_LOG"
-                fi
+                INSTALL_OK=true
               else
                 echo "FAIL: Installation directory does not exist after install" | tee -a "$GATE_LOG"
                 PASS=false
@@ -219,11 +214,143 @@ jobs:
               echo "FAIL: Silent install returned non-zero exit code" | tee -a "$GATE_LOG"
               PASS=false
             fi
+
+            echo "" | tee -a "$GATE_LOG"
+            # 4. Directory name verification
+            echo "--- Check: Directory name verification ---" | tee -a "$GATE_LOG"
+            if [ "$INSTALL_OK" = "true" ]; then
+              echo "Install directory: $INSTALL_DIR" | tee -a "$GATE_LOG"
+              echo "Install directory contents:" | tee -a "$GATE_LOG"
+              find "$INSTALL_DIR" -maxdepth 2 -mindepth 1 -print 2>/dev/null | sort | tee -a "$GATE_LOG" || true
+
+              INSTALL_DIR_NAME=$(basename "$INSTALL_DIR")
+              if [ "$INSTALL_DIR_NAME" = "$PRODUCT_NAME" ]; then
+                echo "PASS: Install directory name is $PRODUCT_NAME" | tee -a "$GATE_LOG"
+              else
+                echo "FAIL: Install directory name is '$INSTALL_DIR_NAME', expected '$PRODUCT_NAME'" | tee -a "$GATE_LOG"
+                PASS=false
+              fi
+
+              if [ -d "$INSTALL_DIR/resources" ]; then
+                echo "PASS: Expected resources directory exists" | tee -a "$GATE_LOG"
+              else
+                echo "FAIL: Expected resources directory missing" | tee -a "$GATE_LOG"
+                PASS=false
+              fi
+            else
+              echo "SKIP: Installation did not complete" | tee -a "$GATE_LOG"
+            fi
+
+            echo "" | tee -a "$GATE_LOG"
+            # 5. File existence after install
+            echo "--- Check: File existence after install ---" | tee -a "$GATE_LOG"
+            if [ "$INSTALL_OK" = "true" ]; then
+              echo "Installed files:" | tee -a "$GATE_LOG"
+              find "$INSTALL_DIR" -type f -print 2>/dev/null | sort | tee -a "$GATE_LOG" || true
+
+              MAIN_EXE="$INSTALL_DIR/$PRODUCT_NAME.exe"
+              if [ -f "$MAIN_EXE" ]; then
+                echo "PASS: Main executable found: $MAIN_EXE" | tee -a "$GATE_LOG"
+              else
+                MAIN_EXE=$(find "$INSTALL_DIR" -maxdepth 1 -type f -iname "$PRODUCT_NAME*.exe" ! -iname '*uninstall*.exe' 2>/dev/null | head -1)
+                if [ -n "$MAIN_EXE" ] && [ -f "$MAIN_EXE" ]; then
+                  echo "PASS: Main executable found: $MAIN_EXE" | tee -a "$GATE_LOG"
+                else
+                  echo "FAIL: Main executable not found in $INSTALL_DIR" | tee -a "$GATE_LOG"
+                  MAIN_EXE=""
+                  PASS=false
+                fi
+              fi
+
+              UNINSTALLER=$(find "$INSTALL_DIR" -maxdepth 1 -type f -iname '*uninstall*.exe' 2>/dev/null | head -1)
+              if [ -n "$UNINSTALLER" ] && [ -f "$UNINSTALLER" ]; then
+                echo "PASS: Uninstaller found: $UNINSTALLER" | tee -a "$GATE_LOG"
+              else
+                echo "FAIL: Uninstaller not found in $INSTALL_DIR" | tee -a "$GATE_LOG"
+                UNINSTALLER=""
+                PASS=false
+              fi
+
+              if [ -f "$INSTALL_DIR/resources/app.asar" ]; then
+                echo "PASS: Application archive found: $INSTALL_DIR/resources/app.asar" | tee -a "$GATE_LOG"
+              else
+                echo "FAIL: Application archive missing: $INSTALL_DIR/resources/app.asar" | tee -a "$GATE_LOG"
+                PASS=false
+              fi
+            else
+              echo "SKIP: Installation did not complete" | tee -a "$GATE_LOG"
+            fi
+
+            echo "" | tee -a "$GATE_LOG"
+            # 6. Startup test
+            echo "--- Check: Startup test ---" | tee -a "$GATE_LOG"
+            if [ "$INSTALL_OK" = "true" ] && [ -n "$MAIN_EXE" ] && [ -f "$MAIN_EXE" ]; then
+              echo "Launching $MAIN_EXE ..." | tee -a "$GATE_LOG"
+              "$MAIN_EXE" &
+              APP_PID=$!
+              echo "Started app with shell pid $APP_PID; waiting 5 seconds ..." | tee -a "$GATE_LOG"
+              sleep 5
+
+              TASKLIST_OUTPUT=$(powershell -NoProfile -Command "tasklist /FI \"IMAGENAME eq ${PRODUCT_NAME}.exe\" /NH" 2>&1 || true)
+              echo "$TASKLIST_OUTPUT" | tee -a "$GATE_LOG"
+              if echo "$TASKLIST_OUTPUT" | grep -qi "${PRODUCT_NAME}.exe"; then
+                echo "PASS: $PRODUCT_NAME process is still running after startup wait" | tee -a "$GATE_LOG"
+              else
+                echo "FAIL: $PRODUCT_NAME process was not running after startup wait" | tee -a "$GATE_LOG"
+                PASS=false
+              fi
+
+              echo "Stopping $PRODUCT_NAME process ..." | tee -a "$GATE_LOG"
+              powershell -NoProfile -Command "taskkill /F /T /IM \"${PRODUCT_NAME}.exe\"" 2>&1 | tee -a "$GATE_LOG" || true
+              sleep 2
+            else
+              echo "SKIP: Main executable unavailable" | tee -a "$GATE_LOG"
+            fi
+
+            echo "" | tee -a "$GATE_LOG"
+            if [ "$INSTALL_OK" = "true" ]; then
+              if [ -n "$UNINSTALLER" ] && [ -f "$UNINSTALLER" ]; then
+                echo "Running uninstaller ..." | tee -a "$GATE_LOG"
+                if "$UNINSTALLER" /S 2>&1 | tee -a "$GATE_LOG"; then
+                  echo "PASS: Uninstall completed" | tee -a "$GATE_LOG"
+                  UNINSTALL_OK=true
+                else
+                  echo "FAIL: Uninstall failed" | tee -a "$GATE_LOG"
+                  PASS=false
+                fi
+              else
+                echo "WARN: No uninstaller found in $INSTALL_DIR" | tee -a "$GATE_LOG"
+              fi
+            fi
+
+            echo "" | tee -a "$GATE_LOG"
+            # 7. Uninstall residual check
+            echo "--- Check: Uninstall residual check ---" | tee -a "$GATE_LOG"
+            if [ "$INSTALL_OK" = "true" ]; then
+              if [ "$UNINSTALL_OK" != "true" ]; then
+                echo "FAIL: Uninstall did not complete successfully; residual check cannot pass" | tee -a "$GATE_LOG"
+                PASS=false
+              elif [ -d "$INSTALL_DIR" ]; then
+                RESIDUAL_FILES=$(find "$INSTALL_DIR" -mindepth 1 -print 2>/dev/null | sort || true)
+                if [ -n "$RESIDUAL_FILES" ]; then
+                  echo "FAIL: Files remain after uninstall:" | tee -a "$GATE_LOG"
+                  echo "$RESIDUAL_FILES" | tee -a "$GATE_LOG"
+                  PASS=false
+                else
+                  echo "PASS: Install directory remains but is empty" | tee -a "$GATE_LOG"
+                fi
+              else
+                echo "PASS: Install directory removed after uninstall" | tee -a "$GATE_LOG"
+              fi
+              rmdir "$INSTALL_ROOT" 2>/dev/null || true
+            else
+              echo "SKIP: Installation did not complete" | tee -a "$GATE_LOG"
+            fi
           else
             echo "SKIP: No installer to test" | tee -a "$GATE_LOG"
           fi
 
-          # 4. Summary
+          # 8. Summary
           END_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "" | tee -a "$GATE_LOG"
           echo "=== Summary ===" | tee -a "$GATE_LOG"
@@ -246,12 +373,82 @@ jobs:
             exit 1
           fi
 
+      # --- E2E User Journey test ---
+      - name: E2E User Journey test
+        shell: bash
+        working-directory: client
+        run: |
+          set -euo pipefail
+          mkdir -p docs/gate-logs
+
+          JOURNEY_LOG="docs/gate-logs/e2e-journey-${GITHUB_RUN_ID}.log"
+          START_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          PASS=true
+
+          echo "=== E2E User Journey Test ===" | tee "$JOURNEY_LOG"
+          echo "Run:     $GITHUB_RUN_ID"        | tee -a "$JOURNEY_LOG"
+          echo "Trigger: $GITHUB_REF_NAME"      | tee -a "$JOURNEY_LOG"
+          echo "Start:   $START_TS"             | tee -a "$JOURNEY_LOG"
+          echo ""                               | tee -a "$JOURNEY_LOG"
+
+          # Verify the built app exists
+          if [ ! -f out/main/index.js ]; then
+            echo "FAIL: out/main/index.js not found — client build may have failed" | tee -a "$JOURNEY_LOG"
+            PASS=false
+          else
+            echo "PASS: out/main/index.js found" | tee -a "$JOURNEY_LOG"
+          fi
+
+          # Run the 13-scenario user journey E2E tests
+          if [ "$PASS" = "true" ]; then
+            echo "" | tee -a "$JOURNEY_LOG"
+            echo "--- Running 13 scenarios (S1-S13) ---" | tee -a "$JOURNEY_LOG"
+            if npx playwright test --config=e2e/playwright.config.ts e2e/user-journey.spec.ts 2>&1 | tee -a "$JOURNEY_LOG"; then
+              echo "" | tee -a "$JOURNEY_LOG"
+              echo "PASS: All 13 scenarios passed" | tee -a "$JOURNEY_LOG"
+            else
+              echo "" | tee -a "$JOURNEY_LOG"
+              echo "FAIL: One or more scenarios failed" | tee -a "$JOURNEY_LOG"
+              PASS=false
+            fi
+          fi
+
+          # Summary
+          END_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "" | tee -a "$JOURNEY_LOG"
+          echo "=== Summary ===" | tee -a "$JOURNEY_LOG"
+          echo "Start:  $START_TS" | tee -a "$JOURNEY_LOG"
+          echo "End:    $END_TS"   | tee -a "$JOURNEY_LOG"
+          if [ "$PASS" = "true" ]; then
+            echo "Result: PASS" | tee -a "$JOURNEY_LOG"
+          else
+            echo "Result: FAIL" | tee -a "$JOURNEY_LOG"
+          fi
+
+          echo "$PASS" | sed 's/true/PASS/;s/false/FAIL/' > docs/gate-logs/.journey-result
+
+          if [ "$PASS" = "false" ]; then
+            echo ""
+            echo "E2E Journey test FAILED. See $JOURNEY_LOG for details."
+            exit 1
+          fi
+
       - name: Upload gate-log (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: installer-gate-log
           path: docs/gate-logs/
+
+      - name: Upload E2E journey artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-journey-results
+          path: |
+            docs/gate-logs/
+            client/e2e/test-results/
+          if-no-files-found: ignore
 
       # Timeout handler — save partial log on timeout
       - name: Save gate-log on timeout
