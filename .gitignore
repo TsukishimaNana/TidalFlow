@@ -1,9 +1,6 @@
-=======
 *.db
 dist/
 .DS_Store
 .env
-<<<<<<< HEAD
 node_modules/
->>>>>>> origin/feature/phase1-t10-logging-error-handling
 out/
