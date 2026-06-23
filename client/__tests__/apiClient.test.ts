@@ -9,8 +9,7 @@ describe('apiClient', () => {
     })
 
     it('returns empty string when no env vars set', () => {
-      vi.stubEnv('API_KEY', undefined as any)
-      vi.stubEnv('TIDALFLOW_API_KEY', undefined as any)
+      // After vi.unstubAllEnvs(), process.env has no TIDALFLOW_API_KEY or API_KEY
       expect(getApiKey()).toBe('')
     })
 
@@ -27,27 +26,29 @@ describe('apiClient', () => {
   })
 
   describe('getWsUrl', () => {
+    beforeEach(() => {
+      vi.unstubAllEnvs()
+      delete process.env.TIDALFLOW_WS_URL
+      delete process.env.TIDALFLOW_SERVER_URL
+      delete process.env.SERVER_URL
+    })
+
     it('uses TIDALFLOW_WS_URL when set', () => {
-      vi.stubEnv('TIDALFLOW_WS_URL', 'wss://custom.example.com/ws')
+      process.env.TIDALFLOW_WS_URL = 'wss://custom.example.com/ws'
       expect(getWsUrl()).toBe('wss://custom.example.com/ws')
     })
 
     it('constructs ws:// from http:// server URL', () => {
-      vi.stubEnv('TIDALFLOW_WS_URL', undefined as any)
-      vi.stubEnv('TIDALFLOW_SERVER_URL', 'http://localhost:4000')
+      process.env.TIDALFLOW_SERVER_URL = 'http://localhost:4000'
       expect(getWsUrl()).toBe('ws://localhost:4000/ws')
     })
 
     it('constructs wss:// from https:// server URL', () => {
-      vi.stubEnv('TIDALFLOW_WS_URL', undefined as any)
-      vi.stubEnv('TIDALFLOW_SERVER_URL', 'https://tidal.example.com')
+      process.env.TIDALFLOW_SERVER_URL = 'https://tidal.example.com'
       expect(getWsUrl()).toBe('wss://tidal.example.com/ws')
     })
 
     it('falls back to DEFAULT_SERVER_URL', () => {
-      vi.stubEnv('TIDALFLOW_WS_URL', undefined as any)
-      vi.stubEnv('TIDALFLOW_SERVER_URL', undefined as any)
-      vi.stubEnv('SERVER_URL', undefined as any)
       expect(getWsUrl()).toBe('ws://localhost:3000/ws')
     })
   })
@@ -59,7 +60,8 @@ describe('apiClient', () => {
     beforeEach(() => {
       originalFetch = global.fetch
       global.fetch = mockFetch
-      vi.stubEnv('TIDALFLOW_API_KEY', undefined as any)
+      vi.unstubAllEnvs()
+      delete process.env.TIDALFLOW_API_KEY
       vi.stubEnv('API_KEY', 'test-key')
       vi.stubEnv('TIDALFLOW_SERVER_URL', 'http://localhost:3000')
     })
