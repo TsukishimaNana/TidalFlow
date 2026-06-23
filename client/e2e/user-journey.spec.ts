@@ -71,7 +71,6 @@ class MockTaskApiServer {
 
     return {
       id: `e2e-${this.nextTaskId++}`,
-      title: overrides.title,
       description: '',
       category: 'programming',
       status: 'pending',
