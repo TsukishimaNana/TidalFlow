@@ -19,10 +19,10 @@ describe('apiClient', () => {
       expect(getApiKey()).toBe('test-key-123')
     })
 
-    it('prefers TIDALFLOW_API_KEY over API_KEY', () => {
-      vi.stubEnv('TIDALFLOW_API_KEY', 'new-key')
+    it('prefers API_KEY over TIDALFLOW_API_KEY', () => {
       vi.stubEnv('API_KEY', 'old-key')
-      expect(getApiKey()).toBe('new-key')
+      vi.stubEnv('TIDALFLOW_API_KEY', 'new-key')
+      expect(getApiKey()).toBe('old-key')
     })
   })
 
@@ -155,6 +155,118 @@ describe('apiClient', () => {
 
       expect(mockFetch.mock.calls[0][1].method).toBe('DELETE')
       expect(result.success).toBe(true)
+    })
+
+    // ===== 新增 8 条：14 → 22 =====
+
+    it('apiClient.patch sends PATCH request', async () => {
+      mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { id: 't1' } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }))
+
+      const result = await apiClient.patch('/tasks/t1', { status: 'done' })
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      const [_url, init] = mockFetch.mock.calls[0]
+      expect(init.method).toBe('PATCH')
+      expect(init.headers['Content-Type']).toBe('application/json')
+      expect(JSON.parse(init.body)).toEqual({ status: 'done' })
+      expect(result.success).toBe(true)
+    })
+
+    it('apiClient.get sends query parameters', async () => {
+      mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }))
+
+      await apiClient.get('/tasks', { status: 'active', page: 1, limit: 20 })
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      const [url] = mockFetch.mock.calls[0]
+      expect(url).toContain('status=active')
+      expect(url).toContain('page=1')
+      expect(url).toContain('limit=20')
+    })
+
+    it('apiClient.get on health end point does not add /api/v1 prefix', async () => {
+      mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ok' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }))
+
+      await apiClient.get('/health')
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      const [url] = mockFetch.mock.calls[0]
+      expect(url).toContain('/health')
+      expect(url).not.toContain('/api/v1')
+    })
+
+    it('apiClient.post without body omits Content-Type', async () => {
+      mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: {} }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }))
+
+      await apiClient.post('/tasks')
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      const [_, init] = mockFetch.mock.calls[0]
+      expect(init.method).toBe('POST')
+      expect(init.headers['Content-Type']).toBeUndefined()
+      expect(init.body).toBeUndefined()
+    })
+
+    it('apiClient returns error from JSON response body', async () => {
+      mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Task not found' }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      }))
+
+      const result = await apiClient.get('/tasks/invalid')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Task not found')
+    })
+
+    it('apiClient returns 404 fallback error when no JSON error field', async () => {
+      mockFetch.mockResolvedValueOnce(new Response('Not Found', {
+        status: 404,
+        headers: { 'content-type': 'text/plain' },
+      }))
+
+      const result = await apiClient.get('/tasks/nonexistent')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('404')
+    })
+
+    it('apiClient handles text/plain success response', async () => {
+      const statusText = 'healthy'
+      mockFetch.mockResolvedValueOnce(new Response(statusText, {
+        status: 200,
+        headers: { 'content-type': 'text/plain' },
+      }))
+
+      const result = await apiClient.get<string>('/health')
+
+      expect(result.success).toBe(true)
+      expect(result.data).toBe(statusText)
+    })
+
+    it('apiClient normalizes path without leading slash', async () => {
+      mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }))
+
+      await apiClient.get('tasks')
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      const [url] = mockFetch.mock.calls[0]
+      expect(url).toContain('/api/v1/tasks')
     })
   })
 })
