@@ -7,16 +7,37 @@ type QueryParams = Record<string, string | number | boolean | null | undefined>;
 type RequestBody = unknown;
 
 function getServerUrl(): string {
-  return process.env.TIDALFLOW_SERVER_URL ?? process.env.SERVER_URL ?? DEFAULT_SERVER_URL;
+  const tidalflowServerUrl = process.env.TIDALFLOW_SERVER_URL;
+  if (tidalflowServerUrl && tidalflowServerUrl !== 'undefined') {
+    return tidalflowServerUrl;
+  }
+
+  const serverUrl = process.env.SERVER_URL;
+  if (serverUrl && serverUrl !== 'undefined') {
+    return serverUrl;
+  }
+
+  return DEFAULT_SERVER_URL;
 }
 
 export function getApiKey(): string {
-  return process.env.API_KEY ?? process.env.TIDALFLOW_API_KEY ?? '';
+  const tidalflowApiKey = process.env.TIDALFLOW_API_KEY;
+  if (tidalflowApiKey && tidalflowApiKey !== 'undefined') {
+    return tidalflowApiKey;
+  }
+
+  const apiKey = process.env.API_KEY;
+  if (apiKey && apiKey !== 'undefined') {
+    return apiKey;
+  }
+
+  return '';
 }
 
 export function getWsUrl(): string {
-  if (process.env.TIDALFLOW_WS_URL) {
-    return process.env.TIDALFLOW_WS_URL;
+  const wsUrl = process.env.TIDALFLOW_WS_URL;
+  if (wsUrl && wsUrl !== 'undefined') {
+    return wsUrl;
   }
 
   const serverUrl = new URL(getServerUrl());
