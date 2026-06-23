@@ -50,10 +50,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify tag is on master
+      - name: Verify tag is on develop
         run: |
-          git fetch origin master:refs/remotes/origin/master
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/master
+          git fetch origin develop:refs/remotes/origin/develop
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/develop
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -93,11 +93,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify tag is on master
+      - name: Verify tag is on develop
         shell: bash
         run: |
-          git fetch origin master:refs/remotes/origin/master
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/master
+          git fetch origin develop:refs/remotes/origin/develop
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/develop
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
