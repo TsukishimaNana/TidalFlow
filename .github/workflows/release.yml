@@ -275,7 +275,7 @@ jobs:
 
       # Timeout handler — save partial log on timeout
       - name: Save gate-log on timeout
-        if: cancelled() || timed_out()
+        if: cancelled()
         shell: bash
         run: |
           mkdir -p docs/gate-logs
