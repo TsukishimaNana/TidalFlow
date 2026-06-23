@@ -9,8 +9,40 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.6
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build shared
+        run: pnpm --filter @tidalflow/shared build
+
+      - name: Run tests
+        run: |
+          if pnpm --filter client exec node -e "const pkg = require('./package.json'); process.exit(pkg.scripts?.test ? 0 : 1)"; then
+            pnpm --filter client test
+          else
+            echo "No test script in client; skipping (T2 vitest not yet merged)"
+          fi
+
   release-server:
     name: Release server
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,6 +85,7 @@ jobs:
 
   release-client:
     name: Release Windows client
+    needs: [test]
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -103,3 +136,148 @@ jobs:
             client/dist/*.blockmap
             client/dist/latest.yml
           generate_release_notes: true
+
+      # --- Installer acceptance test ---
+      - name: Installer acceptance test
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/gate-logs
+
+          GATE_LOG="docs/gate-logs/installer-acceptance-${GITHUB_RUN_ID}.log"
+          START_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EXE_PATH=$(find client/dist -name '*.exe' -type f | head -1)
+          PASS=true
+          RESULT="PASS"
+
+          echo "=== Installer Acceptance Test ===" | tee "$GATE_LOG"
+          echo "Run:     $GITHUB_RUN_ID"         | tee -a "$GATE_LOG"
+          echo "Trigger: $GITHUB_REF_NAME"       | tee -a "$GATE_LOG"
+          echo "Start:   $START_TS"              | tee -a "$GATE_LOG"
+          echo ""                                | tee -a "$GATE_LOG"
+
+          # 1. Installer exists
+          echo "--- Check: Installer exists ---" | tee -a "$GATE_LOG"
+          if [ -z "$EXE_PATH" ] || [ ! -f "$EXE_PATH" ]; then
+            echo "FAIL: No .exe installer found in client/dist/" | tee -a "$GATE_LOG"
+            PASS=false
+          else
+            SIZE=$(stat --printf="%s" "$EXE_PATH" 2>/dev/null || stat -f%z "$EXE_PATH" 2>/dev/null)
+            SIZE_MB=$(echo "scale=2; $SIZE / 1048576" | bc)
+            echo "PASS: Installer found: $(basename "$EXE_PATH") (${SIZE_MB} MB)" | tee -a "$GATE_LOG"
+            if [ "$SIZE" -lt 10485760 ]; then
+              echo "WARN: Installer < 10 MB — may be incomplete" | tee -a "$GATE_LOG"
+            fi
+          fi
+
+          # 2. latest.yml exists and has expected fields
+          echo "" | tee -a "$GATE_LOG"
+          echo "--- Check: latest.yml ---" | tee -a "$GATE_LOG"
+          LATEST_YML="client/dist/latest.yml"
+          if [ ! -f "$LATEST_YML" ]; then
+            echo "FAIL: latest.yml not found" | tee -a "$GATE_LOG"
+            PASS=false
+          else
+            echo "PASS: latest.yml present" | tee -a "$GATE_LOG"
+            for FIELD in version sha512 path; do
+              if grep -q "$FIELD:" "$LATEST_YML"; then
+                echo "  PASS: $FIELD field present" | tee -a "$GATE_LOG"
+              else
+                echo "  FAIL: $FIELD field missing" | tee -a "$GATE_LOG"
+                PASS=false
+              fi
+            done
+          fi
+
+          # 3. Silent install + uninstall cycle
+          echo "" | tee -a "$GATE_LOG"
+          echo "--- Check: Silent install/uninstall ---" | tee -a "$GATE_LOG"
+          if [ -n "$EXE_PATH" ] && [ -f "$EXE_PATH" ]; then
+            INSTALL_DIR="$HOME/test-install-$$"
+            echo "Installing to $INSTALL_DIR ..." | tee -a "$GATE_LOG"
+            if "$EXE_PATH" /S /D="$INSTALL_DIR" 2>&1 | tee -a "$GATE_LOG"; then
+              if [ -d "$INSTALL_DIR" ]; then
+                echo "PASS: Installation completed, directory exists" | tee -a "$GATE_LOG"
+                # Find and run uninstaller
+                UNINSTALLER=$(find "$INSTALL_DIR" -name 'uninstall*.exe' -type f 2>/dev/null | head -1)
+                if [ -n "$UNINSTALLER" ]; then
+                  echo "Running uninstaller ..." | tee -a "$GATE_LOG"
+                  if "$UNINSTALLER" /S 2>&1 | tee -a "$GATE_LOG"; then
+                    echo "PASS: Uninstall completed" | tee -a "$GATE_LOG"
+                  else
+                    echo "FAIL: Uninstall failed" | tee -a "$GATE_LOG"
+                    PASS=false
+                  fi
+                else
+                  echo "WARN: No uninstaller found in $INSTALL_DIR" | tee -a "$GATE_LOG"
+                fi
+              else
+                echo "FAIL: Installation directory does not exist after install" | tee -a "$GATE_LOG"
+                PASS=false
+              fi
+            else
+              echo "FAIL: Silent install returned non-zero exit code" | tee -a "$GATE_LOG"
+              PASS=false
+            fi
+          else
+            echo "SKIP: No installer to test" | tee -a "$GATE_LOG"
+          fi
+
+          # 4. Summary
+          END_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "" | tee -a "$GATE_LOG"
+          echo "=== Summary ===" | tee -a "$GATE_LOG"
+          echo "Start:  $START_TS" | tee -a "$GATE_LOG"
+          echo "End:    $END_TS"   | tee -a "$GATE_LOG"
+          if [ "$PASS" = "true" ]; then
+            RESULT="PASS"
+            echo "Result: PASS" | tee -a "$GATE_LOG"
+          else
+            RESULT="FAIL"
+            echo "Result: FAIL" | tee -a "$GATE_LOG"
+          fi
+
+          # Write gate-log for downstream consumption
+          echo "$RESULT" > docs/gate-logs/.last-result
+
+          if [ "$PASS" = "false" ]; then
+            echo ""
+            echo "Installer acceptance test FAILED. See $GATE_LOG for details."
+            exit 1
+          fi
+
+      - name: Upload gate-log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-gate-log
+          path: docs/gate-logs/
+
+      # Timeout handler — save partial log on timeout
+      - name: Save gate-log on timeout
+        if: cancelled() || timed_out()
+        shell: bash
+        run: |
+          mkdir -p docs/gate-logs
+          GATE_LOG="docs/gate-logs/installer-acceptance-${GITHUB_RUN_ID}.log"
+          if [ ! -f "$GATE_LOG" ]; then
+            echo "=== Installer Acceptance Test (TIMEOUT/CANCELLED) ===" > "$GATE_LOG"
+            echo "Run:     $GITHUB_RUN_ID"  >> "$GATE_LOG"
+            echo "Trigger: $GITHUB_REF_NAME" >> "$GATE_LOG"
+            echo "End:     $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GATE_LOG"
+            echo "Result:  TIMEOUT" >> "$GATE_LOG"
+          else
+            echo "" >> "$GATE_LOG"
+            echo "=== ABORTED (timeout or cancellation) ===" >> "$GATE_LOG"
+            echo "End:  $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GATE_LOG"
+            echo "Result: TIMEOUT" >> "$GATE_LOG"
+          fi
+          echo "TIMEOUT" > docs/gate-logs/.last-result
+
+      - name: Upload gate-log (on timeout)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-gate-log-final
+          path: docs/gate-logs/
+          if-no-files-found: ignore
