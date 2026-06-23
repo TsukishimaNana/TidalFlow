@@ -165,8 +165,8 @@ jobs:
             echo "FAIL: No .exe installer found in client/dist/" | tee -a "$GATE_LOG"
             PASS=false
           else
-            SIZE=$(stat --printf="%s" "$EXE_PATH" 2>/dev/null || stat -f%z "$EXE_PATH" 2>/dev/null)
-            SIZE_MB=$(echo "scale=2; $SIZE / 1048576" | bc)
+            SIZE=$(wc -c < "$EXE_PATH" 2>/dev/null || stat -c%s "$EXE_PATH" 2>/dev/null)
+            SIZE_MB=$(( SIZE / 1048576 ))
             echo "PASS: Installer found: $(basename "$EXE_PATH") (${SIZE_MB} MB)" | tee -a "$GATE_LOG"
             if [ "$SIZE" -lt 10485760 ]; then
               echo "WARN: Installer < 10 MB — may be incomplete" | tee -a "$GATE_LOG"
