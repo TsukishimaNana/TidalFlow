@@ -1,6 +1,5 @@
 appId: com.tidalflow.adhd-time-manager
 productName: TidalFlow
-copyright: Copyright © 2026
 directories:
   output: dist
   buildResources: build
@@ -17,31 +16,13 @@ mac:
         - arm64
         - x64
 win:
+  icon: null
   target:
     - target: nsis
       arch:
         - x64
-  # Certificate config (uncomment when signing is set up):
-  # certificateFile: env:CSC_LINK
-  # certificatePassword: env:CSC_KEY_PASSWORD
 linux:
   category: Utility
   target:
     - AppImage
     - deb
-
-# NSIS Installer Configuration
-nsis:
-  oneClick: false
-  perMachine: false
-  allowElevation: true
-  allowToChangeInstallationDirectory: true
-  deleteAppDataOnUninstall: false
-  runAfterFinish: true
-  unicode: true
-  include: build/installer.nsh
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
-  shortcutName: TidalFlow
-  installerIcon: build/icon.ico
-  installerHeaderIcon: build/icon.ico

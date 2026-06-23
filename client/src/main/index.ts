@@ -1,96 +1,111 @@
-import { app, BrowserWindow } from 'electron'
-import { setupTray, shouldForceQuit } from './tray'
-import { loadRenderer, openExternalLinksInBrowser, preloadPath } from './windows'
-import { registerApiProxyHandlers } from './ipc/apiProxy'
-import { registerCacheHandlers } from './ipc/cacheBridge'
-import { connectWsBridge, disconnectWsBridge, registerWsBridge } from './ipc/wsBridge'
-import { logger } from './logger'
-import { cacheService } from './services/cacheService'
+import { join } from 'node:path';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { IPC_CHANNELS } from '@tidalflow/shared';
+import { createPanelWindow, getPanelWindow, hidePanelWindow, destroyPanelWindow, togglePanelWindow } from './panel';
+import { registerSettingsIpcHandlers } from './settings';
+import { createTray, destroyTray } from './tray';
+import { initAutoUpdater, quitAndInstall } from './updater';
+import { logger } from './logger';
+
+app.setName('TidalFlow');
+
+const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+
+// Flag to track if app is quitting (for close-to-tray behavior)
+let isQuitting = false;
+
+let mainWindow: BrowserWindow | null = null;
 
 function createMainWindow(): BrowserWindow {
-  logger.info('Creating main window');
-
-  const mainWindow = new BrowserWindow({
+  logger.info("Creating main window");
+  const win = new BrowserWindow({
     width: 1180,
     height: 760,
     minWidth: 920,
     minHeight: 640,
     title: 'TidalFlow',
     backgroundColor: '#f7f7f5',
-    show: true,
+    show: false,
     webPreferences: {
-      preload: preloadPath,
+      preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
     }
   });
 
-  mainWindow.once('ready-to-show', () => {
+  win.once('ready-to-show', () => {
     logger.info('Main window ready to show');
+    win.show();
   });
 
-  mainWindow.on('close', (event) => {
-    if (shouldForceQuit()) {
-      logger.info('Main window closing');
-      return;
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // Minimize to tray instead of closing
+  win.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      win.hide();
+      hidePanelWindow();
     }
-
-    event.preventDefault();
-    logger.debug('Main window hidden to tray');
-    mainWindow.hide();
   });
 
-  openExternalLinksInBrowser(mainWindow);
-  loadRenderer(mainWindow);
-  logger.info('Main window created');
+  if (isDev && process.env.ELECTRON_RENDERER_URL) {
+    void win.loadURL(process.env.ELECTRON_RENDERER_URL);
+  } else {
+    void win.loadFile(join(__dirname, '../renderer/index.html'));
+  }
 
-  return mainWindow;
+  return win;
 }
 
-void app.whenReady().then(() => {
-  logger.info('App ready');
-  logger.info('Initializing services');
+void app.whenReady().then(async () => {
+  registerSettingsIpcHandlers();
 
-  cacheService.initCache();
-  registerApiProxyHandlers();
-  registerCacheHandlers();
-  registerWsBridge();
-  logger.info('Services initialized');
+  mainWindow = createMainWindow();
+  const panelWin = createPanelWindow();
+  await createTray(mainWindow, panelWin);
+  initAutoUpdater(mainWindow);
 
-  let mainWindow = createMainWindow();
-  setupTray(mainWindow, app);
-  logger.info('Tray setup complete');
+  // IPC handlers
+  ipcMain.handle(IPC_CHANNELS.WINDOW_TOGGLE_PANEL, () => {
+    togglePanelWindow();
+  });
 
-  connectWsBridge();
-  logger.info('WebSocket bridge connection started');
-
-  app.on('activate', () => {
-    logger.info('App activated');
-
-    if (mainWindow.isDestroyed()) {
-      mainWindow = createMainWindow();
-      setupTray(mainWindow, app);
-      logger.info('Tray setup complete');
-    } else {
-      mainWindow.show();
-      mainWindow.focus();
+  ipcMain.handle(IPC_CHANNELS.WINDOW_SET_ALWAYS_ON_TOP, (_event, flag: boolean) => {
+    const panel = getPanelWindow();
+    if (panel && !panel.isDestroyed()) {
+      panel.setAlwaysOnTop(flag);
     }
   });
-});
 
-app.on('before-quit', () => {
-  logger.info('App before quit');
-  disconnectWsBridge();
-  cacheService.close();
-  logger.info('Services closed');
+  ipcMain.handle(IPC_CHANNELS.UPDATE_INSTALL, () => {
+    quitAndInstall();
+  });
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      mainWindow = createMainWindow();
+    }
+  });
+
+  app.on('before-quit', () => {
+    logger.info('App quitting');
+    isQuitting = true;
+  });
 });
 
 app.on('window-all-closed', () => {
-  logger.debug('All windows closed');
-
-  if (shouldForceQuit()) {
-    logger.info('Quitting app after all windows closed');
+  if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Cleanup on quit
+app.on('will-quit', () => {
+  destroyPanelWindow();
+  destroyTray();
 });

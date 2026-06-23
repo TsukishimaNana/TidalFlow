@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron';
-import { IPC_CHANNELS } from '../../../../shared/src/constants';
-import type { WsServerEvent } from '../../../../shared/src/wsEvents';
+import { IPC_CHANNELS } from '@tidalflow/shared';
+import type { WsServerEvent } from '@tidalflow/shared';
 import { getApiKey, getWsUrl } from '../services/apiClient';
 import { WsClient } from '../services/wsClient';
 

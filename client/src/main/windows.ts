@@ -3,7 +3,7 @@ import { BrowserWindow, shell } from 'electron';
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 
-export const preloadPath = join(__dirname, '../preload/index.mjs');
+export const preloadPath = join(__dirname, '../preload/index.js');
 
 export function loadRenderer(window: BrowserWindow, route = ''): void {
   if (isDev && process.env.ELECTRON_RENDERER_URL) {

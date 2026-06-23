@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { IPC_CHANNELS } from '../../../../shared/src/constants';
+import { IPC_CHANNELS } from '@tidalflow/shared';
 import { apiClient } from '../services/apiClient';
 
 type QueryParams = Record<string, string | number | boolean | null | undefined>;

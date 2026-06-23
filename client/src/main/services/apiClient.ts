@@ -1,5 +1,5 @@
-import { DEFAULT_SERVER_URL } from '../../../../shared/src/constants';
-import type { ApiResponse } from '../../../../shared/src/types';
+import { DEFAULT_SERVER_URL } from '@tidalflow/shared';
+import type { ApiResponse } from '@tidalflow/shared';
 
 const API_PREFIX = '/api/v1';
 
@@ -11,7 +11,7 @@ function getServerUrl(): string {
 }
 
 export function getApiKey(): string {
-  return process.env.TIDALFLOW_API_KEY ?? process.env.API_KEY ?? '';
+  return process.env.API_KEY ?? process.env.TIDALFLOW_API_KEY ?? '';
 }
 
 export function getWsUrl(): string {
