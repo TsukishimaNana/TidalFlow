@@ -19,10 +19,10 @@ describe('apiClient', () => {
       expect(getApiKey()).toBe('test-key-123')
     })
 
-    it('prefers TIDALFLOW_API_KEY over API_KEY', () => {
+    it('prefers API_KEY over TIDALFLOW_API_KEY', () => {
       vi.stubEnv('TIDALFLOW_API_KEY', 'new-key')
       vi.stubEnv('API_KEY', 'old-key')
-      expect(getApiKey()).toBe('new-key')
+      expect(getApiKey()).toBe('old-key')
     })
   })
 

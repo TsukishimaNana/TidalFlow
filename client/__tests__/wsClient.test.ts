@@ -29,6 +29,11 @@ vi.mock('ws', () => {
   }
 })
 
+vi.mock('@tidalflow/shared', () => ({
+  createAuthClientEvent: (apiKey: string) => ({ type: 'auth', payload: { apiKey } }),
+  createPingClientEvent: () => ({ type: 'ping' }),
+}))
+
 import { WsClient } from '../src/main/services/wsClient'
 import type { WsServerEvent } from '../../shared/src/wsEvents'
 
