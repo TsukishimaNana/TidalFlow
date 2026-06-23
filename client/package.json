@@ -8,7 +8,10 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "build:win": "electron-vite build --win",
-    "preview": "electron-vite preview"
+    "preview": "electron-vite preview",
+    "test": "vitest run",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "test:journey": "playwright test --config=e2e/playwright.config.ts e2e/user-journey.spec.ts"
   },
   "dependencies": {
     "@tidalflow/shared": "workspace:*",
