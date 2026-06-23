@@ -246,6 +246,23 @@ jobs:
             exit 1
           fi
 
+      - name: E2E user journey tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== E2E User Journey Tests ==="
+          cd client
+          npx playwright install chromium
+          pnpm test:journey
+
+      - name: Upload E2E results (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-journey-results
+          path: client/e2e/test-results/
+          if-no-files-found: ignore
+
       - name: Upload gate-log (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
