@@ -16,6 +16,7 @@ mac:
         - arm64
         - x64
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch:
@@ -25,3 +26,9 @@ linux:
   target:
     - AppImage
     - deb
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  perMachine: false
